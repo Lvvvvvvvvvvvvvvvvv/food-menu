@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍳 菜单管理</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #4ECDC4;
+      --primary-light: #E8F8F7;
+      --text: #2D3436;
+      --text-light: #636E72;
+      --bg: #FAFAFA;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+      color: var(--primary);
+    }
+    
+    .section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    
+    .section h2 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      color: var(--text-light);
+      margin-bottom: 6px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      opacity: 0.9;
+    }
+    
+    .dish-list {
+      margin-top: 16px;
+    }
+    
+    .dish-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .dish-item-info {
+      flex: 1;
+    }
+    
+    .dish-item-name {
+      font-weight: 600;
+    }
+    
+    .dish-item-category {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+    
+    .delete-btn {
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .success-msg {
+      background: #d4edda;
+      color: #155724;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    
+    .success-msg.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>🍳 菜单管理</h1>
+  
+  <div class="success-msg" id="success-msg">✅ 操作成功！</div>
+  
+  <div class="section">
+    <h2>➕ 添加新菜品</h2>
+    <form id="add-dish-form">
+      <div class="form-group">
+        <label>菜品名称 *</label>
+        <input type="text" id="dish-name" required placeholder="如：酸菜鱼">
+      </div>
+      <div class="form-group">
+        <label>分类 *</label>
+        <select id="dish-category" required>
+          <option value="荤菜">荤菜</option>
+          <option value="素菜">素菜</option>
+          <option value="汤品">汤品</option>
+          <option value="主食">主食</option>
+          <option value="凉菜">凉菜</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>描述</label>
+        <textarea id="dish-desc" placeholder="简单描述一下这道菜..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>标签（用逗号分隔）</label>
+        <input type="text" id="dish-tags" placeholder="如：下饭,辣,经典">
+      </div>
+      <button type="submit" class="btn">添加菜品</button>
+    </form>
+  </div>
+  
+  <div class="section">
+    <h2>📋 已有菜品</h2>
+    <div class="dish-list" id="dish-list"></div>
+  </div>
+  
+  <a href="index.html" class="back-link">← 返回点菜页面</a>
+  
+  <script src="dishes.js"></script>
+  <script>
+    const DB_KEY = 'food_menu_data';
+    
+    function getData() {
+      const data = localStorage.getItem(DB_KEY);
+      return data ? JSON.parse(data) : { orders: [], customDishes: [] };
+    }
+    
+    function saveData(data) {
+      localStorage.setItem(DB_KEY, JSON.stringify(data));
+    }
+    
+    function renderDishList() {
+      const data = getData();
+      const container = document.getElementById('dish-list');
+      
+      // 合并默认菜品和自定义菜品
+      const allDishes = [...DISHES_DATA, ...data.customDishes];
+      
+      container.innerHTML = allDishes.map(dish => `
+        <div class="dish-item" data-id="${dish.id}">
+          <div class="dish-item-info">
+            <div class="dish-item-name">${dish.name}</div>
+            <div class="dish-item-category">${dish.category}</div>
+          </div>
+          ${dish.id > 100 ? `<button class="delete-btn" onclick="deleteDish(${dish.id})">删除</button>` : ''}
+        </div>
+      `).join('');
+    }
+    
+    function deleteDish(id) {
+      if (!confirm('确定删除这道菜吗？')) return;
+      
+      const data = getData();
+      data.customDishes = data.customDishes.filter(d => d.id !== id);
+      saveData(data);
+      renderDishList();
+      showSuccess();
+    }
+    
+    function showSuccess() {
+      const msg = document.getElementById('success-msg');
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 2000);
+    }
+    
+    document.getElementById('add-dish-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const data = getData();
+      const newDish = {
+        id: Date.now(), // 用时间戳作为唯一ID
+        name: document.getElementById('dish-name').value,
+        category: document.getElementById('dish-category').value,
+        desc: document.getElementById('dish-desc').value || '美味可口',
+        tags: document.getElementById('dish-tags').value.split(',').map(t => t.trim()).filter(t => t),
+        image: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23f0f0f0" width="100" height="100"/><text x="50" y="55" text-anchor="middle" font-size="30">🍽️</text></svg>'
+      };
+      
+      data.customDishes.push(newDish);
+      saveData(data);
+      
+      // 清空表单
+      e.target.reset();
+      
+      // 刷新列表
+      renderDishList();
+      showSuccess();
+    });
+    
+    // 初始化
+    renderDishList();
+  </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🏠 点菜小助手</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 点菜页面 -->
+  <div id="menu-page" class="page active">
+    <div class="header">
+      <h1>🏠 今天想吃什么？</h1>
+      <p class="subtitle">选好啦就告诉成成~</p>
+    </div>
+    
+    <div class="date-info">
+      <span id="today-date"></span>
+    </div>
+
+    <!-- 分类标签 -->
+    <div class="category-tabs" id="category-tabs"></div>
+
+    <!-- 菜品列表 -->
+    <div class="dishes-container" id="dishes-container"></div>
+
+    <!-- 已选菜品 -->
+    <div class="selected-panel" id="selected-panel">
+      <div class="selected-header">
+        <span>已选 <strong id="selected-count">0</strong> 道菜</span>
+        <button class="clear-btn" id="clear-btn">清空</button>
+      </div>
+      <div class="selected-list" id="selected-list"></div>
+      <button class="submit-btn" id="submit-btn">✨ 确认点菜</button>
+    </div>
+  </div>
+
+  <!-- 历史记录页面 -->
+  <div id="history-page" class="page">
+    <div class="header">
+      <h1>📜 点菜记录</h1>
+      <button class="back-btn" id="back-to-menu">← 返回点菜</button>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+  <!-- 成功提示 -->
+  <div class="success-modal" id="success-modal">
+    <div class="success-content">
+      <div class="success-icon">✅</div>
+      <h2>点菜成功！</h2>
+      <p>成成收到啦，等着吃好吃的吧~</p>
+      <button class="ok-btn" id="ok-btn">好的</button>
+    </div>
+  </div>
+
+  <script src="dishes.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
