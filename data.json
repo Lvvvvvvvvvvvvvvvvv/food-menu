@@ -1,0 +1,18 @@
+{
+  "orders": [
+    {
+      "id": 1775027563398,
+      "date": "2026-04-01T07:12:43.398Z",
+      "userId": "吃货Y7J0",
+      "dishes": [
+        {
+          "name": "可乐鸡翅",
+          "note": ""
+        }
+      ]
+    }
+  ],
+  "customDishes": [],
+  "deletedDishIds": [],
+  "userId": "吃货Y7J0"
+}
