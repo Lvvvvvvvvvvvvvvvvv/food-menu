@@ -24,7 +24,6 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 页面切换 */
 .page {
   display: none;
   min-height: 100vh;
@@ -35,12 +34,12 @@ body {
   display: block;
 }
 
-/* 头部 */
 .header {
   background: linear-gradient(135deg, var(--primary), #FF8E8E);
   color: white;
   padding: 24px 20px;
   text-align: center;
+  position: relative;
 }
 
 .header h1 {
@@ -63,7 +62,6 @@ body {
   border-bottom: 1px solid #eee;
 }
 
-/* 分类标签 */
 .category-tabs {
   display: flex;
   gap: 8px;
@@ -97,7 +95,6 @@ body {
   color: white;
 }
 
-/* 菜品列表 */
 .dishes-container {
   padding: 12px 16px;
   display: grid;
@@ -184,7 +181,6 @@ body {
   color: var(--text-light);
 }
 
-/* 备注输入 */
 .note-input {
   margin-top: 8px;
   width: 100%;
@@ -200,7 +196,6 @@ body {
   display: block;
 }
 
-/* 已选面板 */
 .selected-panel {
   position: fixed;
   bottom: 0;
@@ -280,7 +275,6 @@ body {
   transform: scale(0.98);
 }
 
-/* 成功弹窗 */
 .success-modal {
   position: fixed;
   inset: 0;
@@ -329,7 +323,6 @@ body {
   cursor: pointer;
 }
 
-/* 历史记录 */
 .back-btn {
   margin-top: 8px;
   padding: 6px 16px;
@@ -384,9 +377,8 @@ body {
   margin-top: 8px;
 }
 
-/* 历史入口 */
 .history-btn {
-  position: fixed;
+  position: absolute;
   top: 16px;
   right: 16px;
   width: 40px;
@@ -396,10 +388,8 @@ body {
   border-radius: 50%;
   font-size: 20px;
   cursor: pointer;
-  z-index: 50;
 }
 
-/* 空状态 */
 .empty-state {
   text-align: center;
   padding: 40px 20px;

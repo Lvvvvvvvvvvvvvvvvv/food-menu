@@ -7,24 +7,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- 点菜页面 -->
   <div id="menu-page" class="page active">
     <div class="header">
       <h1>🏠 今天想吃什么？</h1>
       <p class="subtitle">选好啦就告诉成成~</p>
+      <button class="history-btn" title="查看历史">📜</button>
     </div>
     
     <div class="date-info">
       <span id="today-date"></span>
     </div>
 
-    <!-- 分类标签 -->
     <div class="category-tabs" id="category-tabs"></div>
-
-    <!-- 菜品列表 -->
     <div class="dishes-container" id="dishes-container"></div>
 
-    <!-- 已选菜品 -->
     <div class="selected-panel" id="selected-panel">
       <div class="selected-header">
         <span>已选 <strong id="selected-count">0</strong> 道菜</span>
@@ -35,7 +31,6 @@
     </div>
   </div>
 
-  <!-- 历史记录页面 -->
   <div id="history-page" class="page">
     <div class="header">
       <h1>📜 点菜记录</h1>
@@ -44,7 +39,6 @@
     <div class="history-list" id="history-list"></div>
   </div>
 
-  <!-- 成功提示 -->
   <div class="success-modal" id="success-modal">
     <div class="success-content">
       <div class="success-icon">✅</div>
