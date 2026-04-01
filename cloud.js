@@ -1,0 +1,83 @@
+// ========== 云同步服务 ==========
+const REPO_OWNER = 'Lvvvvvvvvvvvvvvvvv';
+const REPO_NAME = 'food-menu';
+const DATA_FILE = 'data.json';
+
+// Token 通过 URL 参数传递，避免硬编码
+const TOKEN = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('food_menu_token') || '';
+
+let cachedSha = null;
+
+async function pullFromCloud() {
+  if (!TOKEN) return null;
+  
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE}`,
+      { headers: { Authorization: `token ${TOKEN}` } }
+    );
+    
+    if (res.status === 404) return null;
+    
+    const data = await res.json();
+    cachedSha = data.sha;
+    
+    const content = atob(data.content);
+    return JSON.parse(content);
+  } catch (e) {
+    console.log('云同步拉取失败', e);
+    return null;
+  }
+}
+
+async function pushToCloud(data) {
+  if (!TOKEN) return;
+  
+  try {
+    const body = {
+      message: `📝 更新点菜数据 - ${new Date().toLocaleString('zh-CN')}`,
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))))
+    };
+    
+    if (cachedSha) body.sha = cachedSha;
+    
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DATA_FILE}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }
+    );
+    
+    const result = await res.json();
+    if (result.content) cachedSha = result.content.sha;
+    
+    console.log('✅ 云同步成功');
+  } catch (e) {
+    console.log('云同步推送失败', e);
+  }
+}
+
+function mergeData(localData, cloudData) {
+  if (!cloudData) return localData;
+  
+  const orderMap = new Map();
+  [...(cloudData.orders || []), ...(localData.orders || [])].forEach(order => {
+    orderMap.set(order.id, order);
+  });
+  
+  const allOrders = Array.from(orderMap.values())
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .filter(o => Date.now() - new Date(o.date).getTime() < 30 * 24 * 60 * 60 * 1000);
+  
+  return {
+    orders: allOrders,
+    customDishes: cloudData.customDishes || localData.customDishes || [],
+    deletedDishIds: cloudData.deletedDishIds || localData.deletedDishIds || [],
+    userId: localData.userId || '吃货0000'
+  };
+}

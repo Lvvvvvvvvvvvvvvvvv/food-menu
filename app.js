@@ -18,16 +18,45 @@ function getAllDishes() {
   return [...DISHES_DATA, ...data.customDishes].filter(d => !data.deletedDishIds.includes(d.id));
 }
 
+// ========== 云同步 ==========
+let isSyncing = false;
+
+async function syncWithCloud() {
+  if (isSyncing) return;
+  isSyncing = true;
+  
+  try {
+    const localData = getData();
+    const cloudData = await pullFromCloud();
+    
+    if (cloudData) {
+      const merged = mergeData(localData, cloudData);
+      saveData(merged);
+      return merged;
+    }
+  } catch (e) {
+    console.log('同步失败', e);
+  } finally {
+    isSyncing = false;
+  }
+  
+  return getData();
+}
+
 // ========== 页面初始化 ==========
-let selectedDishes = new Map(); // id -> {dish, note}
+let selectedDishes = new Map();
 let currentCategory = '全部';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initDate();
   initUserId();
   renderCategories();
   renderDishes();
   bindEvents();
+  
+  // 首次加载时同步云端数据
+  await syncWithCloud();
+  renderHistory(); // 刷新历史记录
 });
 
 // 初始化/显示用户ID
@@ -38,7 +67,6 @@ function initUserId() {
     saveData(data);
   }
   
-  // 在日期旁边显示用户ID
   const dateInfo = document.getElementById('today-date');
   dateInfo.innerHTML = `${dateInfo.textContent} <span style="color:#FF6B6B;font-weight:600;">(${data.userId})</span>`;
 }
@@ -66,10 +94,7 @@ function renderCategories() {
 // 渲染菜品列表
 function renderDishes() {
   const dishes = getAllDishes();
-  const filtered = currentCategory === '全部' 
-    ? dishes 
-    : dishes.filter(d => d.category === currentCategory);
-  
+  const filtered = currentCategory === '全部' ? dishes : dishes.filter(d => d.category === currentCategory);
   const container = document.getElementById('dishes-container');
   
   container.innerHTML = filtered.map(dish => `
@@ -78,27 +103,19 @@ function renderDishes() {
       <div class="dish-info">
         <div class="dish-name">${dish.name}</div>
         <div class="dish-desc">${dish.desc}</div>
-        <div class="dish-tags">
-          ${dish.tags.map(tag => `<span class="dish-tag">${tag}</span>`).join('')}
-        </div>
+        <div class="dish-tags">${dish.tags.map(tag => `<span class="dish-tag">${tag}</span>`).join('')}</div>
         <textarea class="note-input" placeholder="备注：比如少辣、不要葱..." data-note-id="${dish.id}">${selectedDishes.get(dish.id)?.note || ''}</textarea>
       </div>
     </div>
   `).join('');
   
   if (filtered.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">🍽️</div>
-        <p>暂无菜品</p>
-      </div>
-    `;
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🍽️</div><p>暂无菜品</p></div>`;
   }
 }
 
 // 绑定事件
 function bindEvents() {
-  // 分类切换
   document.getElementById('category-tabs').addEventListener('click', (e) => {
     if (e.target.classList.contains('category-tab')) {
       currentCategory = e.target.dataset.category;
@@ -107,16 +124,13 @@ function bindEvents() {
     }
   });
   
-  // 菜品选择
   document.getElementById('dishes-container').addEventListener('click', (e) => {
     const card = e.target.closest('.dish-card');
     if (card && !e.target.classList.contains('note-input')) {
-      const id = parseInt(card.dataset.id);
-      toggleDish(id);
+      toggleDish(parseInt(card.dataset.id));
     }
   });
   
-  // 备注输入
   document.getElementById('dishes-container').addEventListener('input', (e) => {
     if (e.target.classList.contains('note-input')) {
       const id = parseInt(e.target.dataset.noteId);
@@ -128,30 +142,23 @@ function bindEvents() {
     }
   });
   
-  // 清空
   document.getElementById('clear-btn').addEventListener('click', () => {
     selectedDishes.clear();
     updateSelectedPanel();
     renderDishes();
   });
   
-  // 提交
   document.getElementById('submit-btn').addEventListener('click', submitOrder);
   
-  // 成功弹窗确认
   document.getElementById('ok-btn').addEventListener('click', () => {
     document.getElementById('success-modal').classList.remove('show');
     showHistoryPage();
   });
   
-  // 历史按钮
   document.querySelector('.history-btn').addEventListener('click', showHistoryPage);
-  
-  // 返回点菜
   document.getElementById('back-to-menu').addEventListener('click', showMenuPage);
 }
 
-// 切换菜品选择
 function toggleDish(id) {
   const dishes = getAllDishes();
   const dish = dishes.find(d => d.id === id);
@@ -166,7 +173,6 @@ function toggleDish(id) {
   renderDishes();
 }
 
-// 更新已选面板
 function updateSelectedPanel() {
   const panel = document.getElementById('selected-panel');
   const count = document.getElementById('selected-count');
@@ -188,7 +194,7 @@ function updateSelectedPanel() {
 }
 
 // 提交订单
-function submitOrder() {
+async function submitOrder() {
   if (selectedDishes.size === 0) {
     alert('请先选择菜品哦~');
     return;
@@ -207,22 +213,22 @@ function submitOrder() {
   
   data.orders.unshift(order);
   
-  // 只保留最近30天的记录
+  // 保留最近30天
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   data.orders = data.orders.filter(o => new Date(o.date).getTime() > thirtyDaysAgo);
   
   saveData(data);
   
-  // 清空选择
+  // 推送到云端
+  await pushToCloud(data);
+  
   selectedDishes.clear();
   updateSelectedPanel();
   renderDishes();
   
-  // 显示成功弹窗
   document.getElementById('success-modal').classList.add('show');
 }
 
-// ========== 页面切换 ==========
 function showHistoryPage() {
   document.getElementById('menu-page').classList.remove('active');
   document.getElementById('history-page').classList.add('active');
@@ -234,18 +240,12 @@ function showMenuPage() {
   document.getElementById('menu-page').classList.add('active');
 }
 
-// 渲染历史记录
 function renderHistory() {
   const data = getData();
   const container = document.getElementById('history-list');
   
   if (data.orders.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">📝</div>
-        <p>还没有点菜记录哦~</p>
-      </div>
-    `;
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📝</div><p>还没有点菜记录哦~</p></div>`;
     return;
   }
   

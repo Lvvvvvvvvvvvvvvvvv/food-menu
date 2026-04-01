@@ -214,6 +214,7 @@
   
   <a href="index.html" class="back-link">← 返回点菜页面</a>
   
+  <script src="cloud.js"></script>
   <script src="dishes.js"></script>
   <script>
     const DB_KEY = 'food_menu_data';
@@ -268,18 +269,17 @@
     function deleteDish(id) {
       const data = getData();
       
-      // 如果是自定义菜品，直接从数组中删除
       const customIndex = data.customDishes.findIndex(d => d.id === id);
       if (customIndex !== -1) {
         if (!confirm('确定删除这道自定义菜品吗？删除后无法恢复！')) return;
         data.customDishes.splice(customIndex, 1);
       } else {
-        // 预设菜品，标记为删除
         if (!confirm('确定隐藏这道菜品吗？可以随时恢复')) return;
         data.deletedDishIds.push(id);
       }
       
       saveData(data);
+      pushToCloud(data); // 同步到云端
       renderDishList();
       showSuccess();
     }
@@ -288,6 +288,7 @@
       const data = getData();
       data.deletedDishIds = data.deletedDishIds.filter(d => d !== id);
       saveData(data);
+      pushToCloud(data); // 同步到云端
       renderDishList();
       showSuccess();
     }
