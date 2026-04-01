@@ -4,9 +4,32 @@ const REPO_NAME = 'food-menu';
 const DATA_FILE = 'data.json';
 
 // Token 通过 URL 参数传递，避免硬编码
-const TOKEN = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('food_menu_token') || '';
+const urlParams = new URLSearchParams(window.location.search);
+const TOKEN = urlParams.get('token') || localStorage.getItem('food_menu_token') || '';
+
+// 保存 token 到本地
+if (urlParams.get('token')) {
+  localStorage.setItem('food_menu_token', urlParams.get('token'));
+}
 
 let cachedSha = null;
+
+// Base64 解码（支持中文）
+function decodeBase64(str) {
+  try {
+    // 先尝试 atob
+    const binary = atob(str);
+    // 将二进制转为 UTF-8
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch (e) {
+    console.error('Base64 解码失败', e);
+    return null;
+  }
+}
 
 async function pullFromCloud() {
   if (!TOKEN) return null;
@@ -22,8 +45,8 @@ async function pullFromCloud() {
     const data = await res.json();
     cachedSha = data.sha;
     
-    const content = atob(data.content);
-    return JSON.parse(content);
+    const content = decodeBase64(data.content);
+    return content ? JSON.parse(content) : null;
   } catch (e) {
     console.log('云同步拉取失败', e);
     return null;
