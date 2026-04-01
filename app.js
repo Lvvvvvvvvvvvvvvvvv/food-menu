@@ -4,7 +4,7 @@ const DB_KEY = 'food_menu_data';
 // 获取数据
 function getData() {
   const data = localStorage.getItem(DB_KEY);
-  return data ? JSON.parse(data) : { orders: [], customDishes: [] };
+  return data ? JSON.parse(data) : { orders: [], customDishes: [], deletedDishIds: [], userId: '' };
 }
 
 // 保存数据
@@ -12,10 +12,10 @@ function saveData(data) {
   localStorage.setItem(DB_KEY, JSON.stringify(data));
 }
 
-// 获取所有菜品（包括自定义）
+// 获取所有菜品（包括自定义，排除已删除）
 function getAllDishes() {
   const data = getData();
-  return [...DISHES_DATA, ...data.customDishes];
+  return [...DISHES_DATA, ...data.customDishes].filter(d => !data.deletedDishIds.includes(d.id));
 }
 
 // ========== 页面初始化 ==========
@@ -24,10 +24,24 @@ let currentCategory = '全部';
 
 document.addEventListener('DOMContentLoaded', () => {
   initDate();
+  initUserId();
   renderCategories();
   renderDishes();
   bindEvents();
 });
+
+// 初始化/显示用户ID
+function initUserId() {
+  const data = getData();
+  if (!data.userId) {
+    data.userId = '吃货' + Math.random().toString(36).substr(2, 4).toUpperCase();
+    saveData(data);
+  }
+  
+  // 在日期旁边显示用户ID
+  const dateInfo = document.getElementById('today-date');
+  dateInfo.innerHTML = `${dateInfo.textContent} <span style="color:#FF6B6B;font-weight:600;">(${data.userId})</span>`;
+}
 
 // 显示日期
 function initDate() {
@@ -38,7 +52,8 @@ function initDate() {
 
 // 渲染分类标签
 function renderCategories() {
-  const categories = ['全部', ...CATEGORIES];
+  const dishes = getAllDishes();
+  const categories = ['全部', ...new Set(dishes.map(d => d.category))];
   const container = document.getElementById('category-tabs');
   
   container.innerHTML = categories.map(cat => `
@@ -129,12 +144,8 @@ function bindEvents() {
     showHistoryPage();
   });
   
-  // 历史入口（通过 header 点击）
-  document.querySelector('.header').addEventListener('click', (e) => {
-    if (e.target.classList.contains('history-btn') || e.target.closest('.history-btn')) {
-      showHistoryPage();
-    }
-  });
+  // 历史按钮
+  document.querySelector('.history-btn').addEventListener('click', showHistoryPage);
   
   // 返回点菜
   document.getElementById('back-to-menu').addEventListener('click', showMenuPage);
@@ -187,6 +198,7 @@ function submitOrder() {
   const order = {
     id: Date.now(),
     date: new Date().toISOString(),
+    userId: data.userId,
     dishes: Array.from(selectedDishes.values()).map(item => ({
       name: item.dish.name,
       note: item.note
@@ -244,7 +256,10 @@ function renderHistory() {
     
     return `
       <div class="history-item">
-        <div class="history-date">${dateStr}</div>
+        <div class="history-header">
+          <span class="history-date">${dateStr}</span>
+          <span class="history-user">${order.userId || '匿名'}</span>
+        </div>
         <div class="history-dishes">
           ${order.dishes.map(d => `
             <div class="history-dish">
@@ -258,8 +273,3 @@ function renderHistory() {
     `;
   }).join('');
 }
-
-// 添加历史按钮到 header
-document.querySelector('.header').insertAdjacentHTML('beforeend', `
-  <button class="history-btn" title="查看历史">📜</button>
-`);

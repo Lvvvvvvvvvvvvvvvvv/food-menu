@@ -143,6 +143,34 @@
     .success-msg.show {
       display: block;
     }
+    
+    .category-section {
+      margin-bottom: 24px;
+    }
+    
+    .category-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary-light);
+    }
+    
+    .dish-item.deleted {
+      opacity: 0.5;
+      background: #fee;
+    }
+    
+    .restore-btn {
+      background: #4ECDC4;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -180,7 +208,7 @@
   </div>
   
   <div class="section">
-    <h2>📋 已有菜品</h2>
+    <h2>📋 已有菜品（点击删除/恢复）</h2>
     <div class="dish-list" id="dish-list"></div>
   </div>
   
@@ -192,7 +220,7 @@
     
     function getData() {
       const data = localStorage.getItem(DB_KEY);
-      return data ? JSON.parse(data) : { orders: [], customDishes: [] };
+      return data ? JSON.parse(data) : { orders: [], customDishes: [], deletedDishIds: [] };
     }
     
     function saveData(data) {
@@ -206,22 +234,59 @@
       // 合并默认菜品和自定义菜品
       const allDishes = [...DISHES_DATA, ...data.customDishes];
       
-      container.innerHTML = allDishes.map(dish => `
-        <div class="dish-item" data-id="${dish.id}">
-          <div class="dish-item-info">
-            <div class="dish-item-name">${dish.name}</div>
-            <div class="dish-item-category">${dish.category}</div>
-          </div>
-          ${dish.id > 100 ? `<button class="delete-btn" onclick="deleteDish(${dish.id})">删除</button>` : ''}
+      // 按分类分组
+      const grouped = {};
+      allDishes.forEach(dish => {
+        if (!grouped[dish.category]) grouped[dish.category] = [];
+        grouped[dish.category].push(dish);
+      });
+      
+      // 渲染
+      container.innerHTML = Object.entries(grouped).map(([category, dishes]) => `
+        <div class="category-section">
+          <div class="category-title">${category} (${dishes.length})</div>
+          ${dishes.map(dish => {
+            const isDeleted = data.deletedDishIds.includes(dish.id);
+            const isCustom = dish.id > 1000000000000; // 自定义菜品 ID 是时间戳
+            return `
+              <div class="dish-item ${isDeleted ? 'deleted' : ''}" data-id="${dish.id}">
+                <div class="dish-item-info">
+                  <div class="dish-item-name">${dish.name} ${isDeleted ? '(已删除)' : ''}</div>
+                  <div class="dish-item-category">${dish.desc || ''}</div>
+                </div>
+                ${isDeleted 
+                  ? `<button class="restore-btn" onclick="restoreDish(${dish.id})">恢复</button>`
+                  : `<button class="delete-btn" onclick="deleteDish(${dish.id})">${isCustom ? '删除' : '隐藏'}</button>`
+                }
+              </div>
+            `;
+          }).join('')}
         </div>
       `).join('');
     }
     
     function deleteDish(id) {
-      if (!confirm('确定删除这道菜吗？')) return;
-      
       const data = getData();
-      data.customDishes = data.customDishes.filter(d => d.id !== id);
+      
+      // 如果是自定义菜品，直接从数组中删除
+      const customIndex = data.customDishes.findIndex(d => d.id === id);
+      if (customIndex !== -1) {
+        if (!confirm('确定删除这道自定义菜品吗？删除后无法恢复！')) return;
+        data.customDishes.splice(customIndex, 1);
+      } else {
+        // 预设菜品，标记为删除
+        if (!confirm('确定隐藏这道菜品吗？可以随时恢复')) return;
+        data.deletedDishIds.push(id);
+      }
+      
+      saveData(data);
+      renderDishList();
+      showSuccess();
+    }
+    
+    function restoreDish(id) {
+      const data = getData();
+      data.deletedDishIds = data.deletedDishIds.filter(d => d !== id);
       saveData(data);
       renderDishList();
       showSuccess();
@@ -238,7 +303,7 @@
       
       const data = getData();
       const newDish = {
-        id: Date.now(), // 用时间戳作为唯一ID
+        id: Date.now(),
         name: document.getElementById('dish-name').value,
         category: document.getElementById('dish-category').value,
         desc: document.getElementById('dish-desc').value || '美味可口',
@@ -249,15 +314,11 @@
       data.customDishes.push(newDish);
       saveData(data);
       
-      // 清空表单
       e.target.reset();
-      
-      // 刷新列表
       renderDishList();
       showSuccess();
     });
     
-    // 初始化
     renderDishList();
   </script>
 </body>
